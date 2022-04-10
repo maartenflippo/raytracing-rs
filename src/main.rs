@@ -1,3 +1,4 @@
+mod camera;
 mod hittable;
 mod math;
 mod ray;
@@ -7,12 +8,10 @@ use std::io::Write;
 use hittable::{Hittable, HittableList};
 use indicatif::ProgressBar;
 use math::Color;
+use rand::Rng;
 use ray::Ray;
 
-use crate::{
-    hittable::Sphere,
-    math::{Point3, Vec3},
-};
+use crate::{camera::Camera, hittable::Sphere, math::Vec3};
 
 fn ray_color(ray: &Ray, world: &HittableList) -> Color {
     if let Some(rec) = world.hit(ray, 0.0, f64::MAX) {
@@ -25,13 +24,22 @@ fn ray_color(ray: &Ray, world: &HittableList) -> Color {
     (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
 }
 
-fn write_color(w: &mut impl Write, color: &math::Color) {
+fn write_color(w: &mut impl Write, color: &math::Color, samples_per_pixel: usize) {
+    let r = color.x();
+    let g = color.y();
+    let b = color.z();
+
+    let scale = 1.0 / samples_per_pixel as f64;
+    let r = r * scale;
+    let g = g * scale;
+    let b = b * scale;
+
     writeln!(
         w,
         "{} {} {}",
-        (255.999 * color.x()) as u32,
-        (255.999 * color.y()) as u32,
-        (255.999 * color.z()) as u32
+        (256.0 * r.clamp(0.0, 0.999)) as u32,
+        (256.0 * g.clamp(0.0, 0.999)) as u32,
+        (256.0 * b.clamp(0.0, 0.999)) as u32
     )
     .unwrap();
 }
@@ -40,20 +48,13 @@ fn main() {
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
     const WIDTH: usize = 400;
     const HEIGHT: usize = (WIDTH as f64 / ASPECT_RATIO) as usize;
-
-    let viewport_height = 2.0;
-    let viewport_width = ASPECT_RATIO * viewport_height;
-    let focal_length = 1.0;
+    const SAMPLES_PER_PIXEL: usize = 100;
 
     let mut world = HittableList::new();
     world.add(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
     world.add(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
 
-    let origin = Point3::zero();
-    let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vec3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner =
-        origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
+    let camera = Camera::new();
 
     println!("P3");
     println!("{} {}", WIDTH, HEIGHT);
@@ -61,15 +62,21 @@ fn main() {
 
     let bar = ProgressBar::new((WIDTH * HEIGHT) as u64);
 
+    let mut rng = rand::thread_rng();
+
     for j in (0..HEIGHT).rev() {
         for i in 0..WIDTH {
-            let u = (i as f64) / (WIDTH - 1) as f64;
-            let v = (j as f64) / (HEIGHT - 1) as f64;
+            let mut color = Color::zero();
 
-            let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
-            let color = ray_color(&ray, &world);
+            for _ in 0..SAMPLES_PER_PIXEL {
+                let u = (i as f64 + rng.gen_range(0.0..1.0)) / (WIDTH - 1) as f64;
+                let v = (j as f64 + rng.gen_range(0.0..1.0)) / (HEIGHT - 1) as f64;
 
-            write_color(&mut std::io::stdout(), &color);
+                let ray = camera.get_ray(u, v);
+                color += ray_color(&ray, &world);
+            }
+
+            write_color(&mut std::io::stdout(), &color, SAMPLES_PER_PIXEL);
             bar.inc(1);
         }
     }
