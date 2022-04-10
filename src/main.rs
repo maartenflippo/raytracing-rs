@@ -1,5 +1,6 @@
 mod camera;
 mod hittable;
+mod material;
 mod math;
 mod ray;
 
@@ -11,7 +12,12 @@ use math::Color;
 use rand::Rng;
 use ray::Ray;
 
-use crate::{camera::Camera, hittable::Sphere, math::Vec3};
+use crate::{
+    camera::Camera,
+    hittable::Sphere,
+    material::{Lambertian, Metal},
+    math::Vec3,
+};
 
 fn ray_color(rng: &mut impl Rng, ray: Ray, world: &HittableList, depth: usize) -> Color {
     if depth == 0 {
@@ -19,8 +25,11 @@ fn ray_color(rng: &mut impl Rng, ray: Ray, world: &HittableList, depth: usize) -
     }
 
     if let Some(rec) = world.hit(ray, 0.001, f64::MAX) {
-        let target = rec.p + rec.normal + Vec3::random_unit_vector(rng);
-        return 0.5 * ray_color(rng, Ray::new(rec.p, target - rec.p), world, depth - 1);
+        if let Some((attenuation, scattered)) = rec.material.scatter(ray, &rec) {
+            return attenuation * ray_color(rng, scattered, world, depth - 1);
+        }
+
+        return Color::zero();
     }
 
     let unit_direction = ray.direction().unit();
@@ -57,8 +66,33 @@ fn main() {
     const MAX_DEPTH: usize = 50;
 
     let mut world = HittableList::new();
-    world.add(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
-    world.add(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
+
+    let mut rng = rand::thread_rng();
+    let material_ground = Box::new(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+    let material_center = Box::new(Lambertian::new(Color::new(0.7, 0.3, 0.3)));
+    let material_left = Box::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let material_right = Box::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
+
+    world.add(Box::new(Sphere::new(
+        Vec3::new(0.0, -100.5, -1.0),
+        100.0,
+        material_ground,
+    )));
+    world.add(Box::new(Sphere::new(
+        Vec3::new(0.0, 0.0, -1.0),
+        0.5,
+        material_center,
+    )));
+    world.add(Box::new(Sphere::new(
+        Vec3::new(-1.0, 0.0, -1.0),
+        0.5,
+        material_left,
+    )));
+    world.add(Box::new(Sphere::new(
+        Vec3::new(1.0, 0.0, -1.0),
+        0.5,
+        material_right,
+    )));
 
     let camera = Camera::new();
 
@@ -67,8 +101,6 @@ fn main() {
     println!("255");
 
     let bar = ProgressBar::new((WIDTH * HEIGHT) as u64);
-
-    let mut rng = rand::thread_rng();
 
     for j in (0..HEIGHT).rev() {
         for i in 0..WIDTH {

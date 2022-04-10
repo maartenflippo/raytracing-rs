@@ -1,18 +1,26 @@
 use crate::{
+    material::Material,
     math::{Point3, Vec3},
     ray::Ray,
 };
 
 #[derive(Clone, Copy)]
-pub struct HitRecord {
+pub struct HitRecord<'a> {
     pub p: Point3,
     pub normal: Vec3,
+    pub material: &'a Box<dyn Material>,
     pub t: f64,
     pub front_face: bool,
 }
 
-impl HitRecord {
-    fn new(ray: &Ray, t: f64, p: Point3, outward_normal: Vec3) -> Self {
+impl<'a> HitRecord<'a> {
+    fn new(
+        ray: &Ray,
+        t: f64,
+        p: Point3,
+        outward_normal: Vec3,
+        material: &'a Box<dyn Material>,
+    ) -> Self {
         let front_face = ray.direction().dot(outward_normal) < 0.0;
         let normal = if front_face {
             outward_normal
@@ -23,6 +31,7 @@ impl HitRecord {
         HitRecord {
             p,
             normal,
+            material,
             t,
             front_face,
         }
@@ -36,11 +45,16 @@ pub trait Hittable {
 pub struct Sphere {
     center: Point3,
     radius: f64,
+    material: Box<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: f64) -> Self {
-        Sphere { center, radius }
+    pub fn new(center: Point3, radius: f64, material: Box<dyn Material>) -> Self {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
@@ -71,6 +85,7 @@ impl Hittable for Sphere {
             root,
             p,
             (p - self.center) / self.radius,
+            &self.material,
         ))
     }
 }

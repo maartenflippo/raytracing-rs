@@ -81,6 +81,15 @@ impl Vec3 {
     pub fn unit(self) -> Self {
         self / self.length()
     }
+
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+        self.0.iter().all(|comp| comp.abs() < s)
+    }
+
+    pub fn reflect(self, other: Vec3) -> Vec3 {
+        self - 2.0 * self.dot(other) * other
+    }
 }
 
 impl ops::Neg for Vec3 {
