@@ -1,5 +1,7 @@
 use std::{fmt::Display, ops};
 
+use rand::Rng;
+
 pub type Color = Vec3;
 pub type Point3 = Vec3;
 
@@ -13,6 +15,35 @@ impl Vec3 {
 
     pub fn new(e0: f64, e1: f64, e2: f64) -> Self {
         Vec3([e0, e1, e2])
+    }
+
+    pub fn random(rng: &mut impl Rng) -> Self {
+        Vec3::new(
+            rng.gen_range(0.0..1.0),
+            rng.gen_range(0.0..1.0),
+            rng.gen_range(0.0..1.0),
+        )
+    }
+
+    pub fn random_in_range(rng: &mut impl Rng, min: f64, max: f64) -> Self {
+        Vec3::new(
+            rng.gen_range(min..max),
+            rng.gen_range(min..max),
+            rng.gen_range(min..max),
+        )
+    }
+
+    pub fn random_in_unit_sphere(rng: &mut impl Rng) -> Self {
+        loop {
+            let p = Vec3::random_in_range(rng, -1.0, 1.0);
+            if p.length_squared() < 1.0 {
+                return p;
+            }
+        }
+    }
+
+    pub fn random_unit_vector(rng: &mut impl Rng) -> Self {
+        Vec3::random_in_unit_sphere(rng).unit()
     }
 
     pub fn x(&self) -> f64 {

@@ -13,9 +13,14 @@ use ray::Ray;
 
 use crate::{camera::Camera, hittable::Sphere, math::Vec3};
 
-fn ray_color(ray: &Ray, world: &HittableList) -> Color {
-    if let Some(rec) = world.hit(ray, 0.0, f64::MAX) {
-        return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
+fn ray_color(rng: &mut impl Rng, ray: Ray, world: &HittableList, depth: usize) -> Color {
+    if depth == 0 {
+        return Color::zero();
+    }
+
+    if let Some(rec) = world.hit(ray, 0.001, f64::MAX) {
+        let target = rec.p + rec.normal + Vec3::random_unit_vector(rng);
+        return 0.5 * ray_color(rng, Ray::new(rec.p, target - rec.p), world, depth - 1);
     }
 
     let unit_direction = ray.direction().unit();
@@ -29,10 +34,10 @@ fn write_color(w: &mut impl Write, color: &math::Color, samples_per_pixel: usize
     let g = color.y();
     let b = color.z();
 
-    let scale = 1.0 / samples_per_pixel as f64;
-    let r = r * scale;
-    let g = g * scale;
-    let b = b * scale;
+    let scale = 1.0 / (samples_per_pixel as f64);
+    let r = f64::sqrt(r * scale);
+    let g = f64::sqrt(g * scale);
+    let b = f64::sqrt(b * scale);
 
     writeln!(
         w,
@@ -49,6 +54,7 @@ fn main() {
     const WIDTH: usize = 400;
     const HEIGHT: usize = (WIDTH as f64 / ASPECT_RATIO) as usize;
     const SAMPLES_PER_PIXEL: usize = 100;
+    const MAX_DEPTH: usize = 50;
 
     let mut world = HittableList::new();
     world.add(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
@@ -73,7 +79,7 @@ fn main() {
                 let v = (j as f64 + rng.gen_range(0.0..1.0)) / (HEIGHT - 1) as f64;
 
                 let ray = camera.get_ray(u, v);
-                color += ray_color(&ray, &world);
+                color += ray_color(&mut rng, ray, &world, MAX_DEPTH);
             }
 
             write_color(&mut std::io::stdout(), &color, SAMPLES_PER_PIXEL);
