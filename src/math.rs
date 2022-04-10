@@ -35,11 +35,11 @@ impl Vec3 {
         self.0.iter().map(|e| e * e).sum()
     }
 
-    pub fn dot(&self, rhs: &Self) -> f64 {
+    pub fn dot(&self, rhs: Self) -> f64 {
         self.0.iter().zip(rhs.0.iter()).map(|(l, r)| l * r).sum()
     }
 
-    pub fn cross(&self, rhs: &Self) -> Self {
+    pub fn cross(&self, rhs: Self) -> Self {
         Vec3([
             self.0[1] * rhs.0[2] - self.0[2] * rhs.0[1],
             self.0[2] * rhs.0[0] - self.0[0] * rhs.0[2],

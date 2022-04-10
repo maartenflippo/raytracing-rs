@@ -1,15 +1,24 @@
+mod hittable;
 mod math;
 mod ray;
 
 use std::io::Write;
 
+use hittable::{Hittable, HittableList};
 use indicatif::ProgressBar;
 use math::Color;
 use ray::Ray;
 
-use crate::math::{Point3, Vec3};
+use crate::{
+    hittable::Sphere,
+    math::{Point3, Vec3},
+};
 
-fn ray_color(ray: &Ray) -> Color {
+fn ray_color(ray: &Ray, world: &HittableList) -> Color {
+    if let Some(rec) = world.hit(ray, 0.0, f64::MAX) {
+        return 0.5 * (rec.normal + Color::new(1.0, 1.0, 1.0));
+    }
+
     let unit_direction = ray.direction().unit();
     let t = 0.5 * (unit_direction.y() + 1.0);
 
@@ -36,6 +45,10 @@ fn main() {
     let viewport_width = ASPECT_RATIO * viewport_height;
     let focal_length = 1.0;
 
+    let mut world = HittableList::new();
+    world.add(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
+    world.add(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
+
     let origin = Point3::zero();
     let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
     let vertical = Vec3::new(0.0, viewport_height, 0.0);
@@ -54,7 +67,7 @@ fn main() {
             let v = (j as f64) / (HEIGHT - 1) as f64;
 
             let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
-            let color = ray_color(&ray);
+            let color = ray_color(&ray, &world);
 
             write_color(&mut std::io::stdout(), &color);
             bar.inc(1);
