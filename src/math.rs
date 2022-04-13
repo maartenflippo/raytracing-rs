@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops};
+use std::{f64::consts::PI, fmt::Display, ops};
 
 use rand::Rng;
 
@@ -196,4 +196,8 @@ impl Display for Vec3 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {} {}", self.0[0], self.0[1], self.0[2])
     }
+}
+
+pub fn degrees_to_radians(degrees: f64) -> f64 {
+    degrees * PI / 180.0
 }

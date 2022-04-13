@@ -4,7 +4,7 @@ mod material;
 mod math;
 mod ray;
 
-use std::{io::Write, rc::Rc};
+use std::{f64::consts::PI, io::Write, rc::Rc};
 
 use hittable::{Hittable, HittableList};
 use indicatif::ProgressBar;
@@ -16,7 +16,7 @@ use crate::{
     camera::Camera,
     hittable::Sphere,
     material::{Dielectric, Lambertian, Material, Metal},
-    math::Vec3,
+    math::{Point3, Vec3},
 };
 
 fn ray_color(rng: &mut impl Rng, ray: Ray, world: &HittableList, depth: usize) -> Color {
@@ -90,7 +90,7 @@ fn main() {
     )));
     world.add(Box::new(Sphere::new(
         Vec3::new(-1.0, 0.0, -1.0),
-        -0.4,
+        -0.45,
         Rc::clone(&material_left),
     )));
     world.add(Box::new(Sphere::new(
@@ -99,7 +99,13 @@ fn main() {
         Rc::clone(&material_right),
     )));
 
-    let camera = Camera::new();
+    let camera = Camera::new(
+        Point3::new(-2.0, 2.0, 1.0),
+        Point3::new(0.0, 0.0, -1.0),
+        Vec3::new(0.0, 1.0, 0.0),
+        20.0,
+        ASPECT_RATIO,
+    );
 
     println!("P3");
     println!("{} {}", WIDTH, HEIGHT);
