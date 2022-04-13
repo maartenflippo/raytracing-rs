@@ -4,7 +4,7 @@ mod material;
 mod math;
 mod ray;
 
-use std::{f64::consts::PI, io::Write, rc::Rc};
+use std::{io::Write, rc::Rc};
 
 use hittable::{Hittable, HittableList};
 use indicatif::ProgressBar;
@@ -99,12 +99,20 @@ fn main() {
         Rc::clone(&material_right),
     )));
 
+    let look_from = Point3::new(3.0, 3.0, 2.0);
+    let look_at = Point3::new(0.0, 0.0, -1.0);
+    let v_up = Vec3::new(0.0, 1.0, 0.0);
+    let dist_to_focus = (look_from - look_at).length();
+    let aperture = 2.0;
+
     let camera = Camera::new(
-        Point3::new(-2.0, 2.0, 1.0),
-        Point3::new(0.0, 0.0, -1.0),
-        Vec3::new(0.0, 1.0, 0.0),
+        look_from,
+        look_at,
+        v_up,
         20.0,
         ASPECT_RATIO,
+        aperture,
+        dist_to_focus,
     );
 
     println!("P3");
@@ -121,7 +129,7 @@ fn main() {
                 let u = (i as f64 + rng.gen_range(0.0..1.0)) / (WIDTH - 1) as f64;
                 let v = (j as f64 + rng.gen_range(0.0..1.0)) / (HEIGHT - 1) as f64;
 
-                let ray = camera.get_ray(u, v);
+                let ray = camera.get_ray(&mut rng, u, v);
                 color += ray_color(&mut rng, ray, &world, MAX_DEPTH);
             }
 
